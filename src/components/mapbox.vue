@@ -387,10 +387,10 @@ void main()
       );
       const intersects = raycaster.intersectObjects(scene.children);
       if (intersects.length > 0) {
-        const selected = intersects[0]; // 取第一个物体
-        console.log(`x坐标:${selected.point.x}`);
-        console.log(`y坐标:${selected.point.y}`);
-        console.log(`z坐标:${selected.point.z}`);
+        // const selected = intersects[0]; // 取第一个物体
+        // console.log(`x坐标:${selected.point.x}`);
+        // console.log(`y坐标:${selected.point.y}`);
+        // console.log(`z坐标:${selected.point.z}`);
       }
     },
     gpuClick() {

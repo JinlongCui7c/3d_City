@@ -1,29 +1,39 @@
 <template>
   <div id="scene"></div>
 </template>
+
 <script>
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import Stats from 'stats.js';
 import Wall from "./js/Wall";
 import RunRing from "./js/RunRing";
 import RunLine from "./js/RunLine";
+import Raining from "./js/Raining";
+import MyLight from "./js/MyLight";
+
 let scene; //场景
 let camera; //相机
 let renderer; //创建渲染器
 // eslint-disable-next-line no-unused-vars
 let controls; //控制器
 let pickingScene, pickingTexture; //离屏渲染
+let stats;
+
 
 export default {
   mounted() {
     this.init();
+    this.createLight();
     this.createControls();
     this.addGLTF();
     this.render();
     this.creatWall();
-    // this.creatRing();
+    this.creatRaining();
     this.creatRunLine();
+    this.addaxesHelper();
+    console.log(scene);
     window.addEventListener("click", this.onDocumentMouseDown);
   },
   methods: {
@@ -54,6 +64,16 @@ export default {
       // 创建渲染器对象
       const container = document.getElementById("scene");
       renderer = new THREE.WebGLRenderer({ antialias: true });
+
+      // 将 Stats 实例作为属性传递给 WebGLRenderer
+      renderer.stats = stats;
+
+      // 设置渲染器的属性
+      // renderer.autoClear 是 WebGLRenderer 的一个属性，用于指定在渲染新的帧之前是否自动清除渲染目标的内容
+      // 默认情况下，autoClear 的值为 true，这意味着在每次渲染新的帧之前，渲染器会自动清除渲染目标的内容。这包括清除颜色缓冲区、深度缓冲区和模板缓冲区。
+      // 如果你将 autoClear 设置为 false，渲染器将不会自动清除渲染目标的内容。这在某些情况下可能是有用的，例如在多个渲染步骤之间保留之前的渲染结果。
+      renderer.autoClear = true;
+
       renderer.setSize(container.clientWidth, container.clientHeight); // 设置渲染区域尺寸
       container.appendChild(renderer.domElement); // body元素中插入canvas对象
 
@@ -61,21 +81,38 @@ export default {
       const point = new THREE.PointLight(0xffffff);
       point.position.set(600, 900, 600); // 点光源位置
       scene.add(point); // 点光源添加到场景中
+
       // 环境光
       const ambient = new THREE.AmbientLight(0x404040, 1);
       scene.add(ambient);
+      
       pickingScene = new THREE.Scene(); //离屏渲染
       pickingTexture = new THREE.WebGLRenderTarget(1, 1); //离屏渲染
+
+      // 性能监视器
+      stats = new Stats();
+      // 0: fps, 1: ms, 2: mb, 3+: custom
+      stats.showPanel(0); 
+      document.body.appendChild(stats.dom);
     },
     createControls() {
       controls = new OrbitControls(camera, renderer.domElement);
     },
+
     render() {
+      stats.begin();
+
+      ////// 执行渲染逻辑//////
       this.cityanimate();
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
+      ////////////////////
+      stats.end();
+      // console.log('draw calss=',renderer.info.render.calls);
+      // renderer.info.update();
       requestAnimationFrame(this.render); // 请求再次执行渲染函数render
     },
+
     addGLTF() {
       const loader = new GLTFLoader();
       loader.load("shanghai.gltf", (gltf) => {
@@ -130,50 +167,52 @@ export default {
             value: new THREE.Color("#1B3045"),
           },
         },
-        vertexShader: `
-                varying vec3 vPosition;
-                void main()
-                {
-                  vPosition = position;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }`,
-        fragmentShader: `
-float distanceTo(vec2 src,vec2 dst)
-{
-    float dx=src.x-dst.x;
-    float dy=src.y-dst.y;
-    float dv=dx*dx+dy*dy;
-    return sqrt(dv);
-}
-varying vec3 vPosition;
-uniform float height;
-uniform float uStartTime;
-uniform vec3 uSize;
-uniform vec3 uFlowColor;
-uniform vec3 uCityColor;
-void main()
-{
-    //模型的基础颜色
-    vec3 distColor=uCityColor;
-    // 流动范围当前点z的高度加上流动线的高度
-    float topY=vPosition.z+10.;
-    if(height>vPosition.z&&height<topY){
-        // 颜色渐变
-            float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
-            distColor = mix(uFlowColor, distColor, 1.0-dIndex);
 
-    }
-    //定位当前点位位置
-    vec2 position2D=vec2(vPosition.x,vPosition.y);
-    //求点到原点的距离
-    float Len=distanceTo(position2D,vec2(0,0));
-      if(Len>height*30.0&&Len<(height*30.0+130.0)){
-        // 颜色渐变
-        float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
-        distColor= mix(uFlowColor, distColor, 1.0-dIndex);
-    }
-    gl_FragColor=vec4(distColor,1.0);
-}`,
+        vertexShader: `
+        varying vec3 vPosition;
+        void main()
+        {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        }`,
+
+        fragmentShader: `
+        float distanceTo(vec2 src,vec2 dst)
+        {
+            float dx=src.x-dst.x;
+            float dy=src.y-dst.y;
+            float dv=dx*dx+dy*dy;
+            return sqrt(dv);
+        }
+        varying vec3 vPosition;
+        uniform float height;
+        uniform float uStartTime;
+        uniform vec3 uSize;
+        uniform vec3 uFlowColor;
+        uniform vec3 uCityColor;
+        void main()
+        {
+            //模型的基础颜色
+            vec3 distColor=uCityColor;
+            // 流动范围当前点z的高度加上流动线的高度
+            float topY=vPosition.z+10.;
+            if(height>vPosition.z&&height<topY){
+                // 颜色渐变
+                    float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
+                    distColor = mix(uFlowColor, distColor, 1.0-dIndex);
+
+            }
+            //定位当前点位位置
+            vec2 position2D=vec2(vPosition.x,vPosition.y);
+            //求点到原点的距离
+            float Len=distanceTo(position2D,vec2(0,0));
+              if(Len>height*30.0&&Len<(height*30.0+130.0)){
+                // 颜色渐变
+                float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
+                distColor= mix(uFlowColor, distColor, 1.0-dIndex);
+            }
+            gl_FragColor=vec4(distColor,1.0);
+        }`,
         transparent: true,
       });
 
@@ -244,6 +283,36 @@ void main()
         ],
       });
     },
+    addaxesHelper(){
+      // 红色轴（X轴）：表示水平方向的正方向。在三维空间中，X轴通常表示物体的左右方向。
+      // 绿色轴（Y轴）：表示垂直方向的正方向。在三维空间中，Y轴通常表示物体的上下方向。
+      // 蓝色轴（Z轴）：表示深度方向的正方向。在三维空间中，Z轴通常表示物体的前后方向。
+      // 创建坐标轴对象
+      const axesHelper = new THREE.AxesHelper(1000); // 参数表示坐标轴的长度
+
+      // 添加刻度
+      const size = 1000; // 刻度的长度
+      const divisions = 10; // 刻度的数量
+      const gridHelper = new THREE.GridHelper(size, divisions);
+
+      // 将坐标轴和刻度添加到场景中
+      scene.add(axesHelper);
+      scene.add(gridHelper);
+    },
+
+    creatRaining(){
+      this.rain = new Raining({
+        camera: camera,
+        scene: scene,
+      });
+    },
+
+    createLight(){
+      this.light=new MyLight(
+        {scene: scene}
+      );
+    },
+    
     creatRunLine() {
       this.runline1 = new RunLine({
         img: "z1.png",
@@ -294,10 +363,13 @@ void main()
         type: "run",
       });
     },
+
+    
     onDocumentMouseDown(event) {
       this.gpuClick();
       this.raycastClick(event);
     },
+
     raycastClick(event) {
       event.preventDefault();
       const vector = new THREE.Vector3(); // 三维坐标对象
@@ -313,12 +385,13 @@ void main()
       );
       const intersects = raycaster.intersectObjects(scene.children);
       if (intersects.length > 0) {
-        const selected = intersects[0]; // 取第一个物体
-        console.log(`x坐标:${selected.point.x}`);
-        console.log(`y坐标:${selected.point.y}`);
-        console.log(`z坐标:${selected.point.z}`);
+        // const selected = intersects[0]; // 取第一个物体
+        // console.log(`x坐标:${selected.point.x}`);
+        // console.log(`y坐标:${selected.point.y}`);
+        // console.log(`z坐标:${selected.point.z}`);
       }
     },
+
     gpuClick() {
       renderer.setRenderTarget(pickingTexture);
       renderer.render(pickingScene, camera);
