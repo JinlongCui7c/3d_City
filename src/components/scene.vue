@@ -1,5 +1,10 @@
 <template>
-  <div id="scene"></div>
+  <div id="scene">
+    <el-switch
+      v-model="value"
+      active-text="按月付费">
+  </el-switch>
+  </div>
 </template>
 <script>
 import * as THREE from "three";
@@ -21,9 +26,9 @@ export default {
     this.createControls();
     this.addGLTF();
     this.render();
-    this.creatWall();
+    // this.creatWall();
     // this.creatRing();
-    this.creatRunLine();
+    // this.creatRunLine();
     window.addEventListener("click", this.onDocumentMouseDown);
   },
   methods: {
@@ -33,12 +38,12 @@ export default {
       //天空盒
 
       const textureCube = new THREE.CubeTextureLoader().load([
-        "1.jpg",
-        "2.jpg",
-        "3.jpg",
-        "4.jpg",
-        "5.jpg",
-        "6.jpg",
+        "left.jpg",
+        "right.jpg",
+        "top.jpg",
+        "down.jpg",
+        "front.jpg",
+        "back.jpg",
       ]);
       scene.background = textureCube; // 作为背景贴图
       /**
@@ -67,6 +72,7 @@ export default {
       pickingScene = new THREE.Scene(); //离屏渲染
       pickingTexture = new THREE.WebGLRenderTarget(1, 1); //离屏渲染
     },
+    
     createControls() {
       controls = new OrbitControls(camera, renderer.domElement);
     },
@@ -131,49 +137,50 @@ export default {
           },
         },
         vertexShader: `
-                varying vec3 vPosition;
-                void main()
-                {
-                  vPosition = position;
-                  gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
-                }`,
-        fragmentShader: `
-float distanceTo(vec2 src,vec2 dst)
-{
-    float dx=src.x-dst.x;
-    float dy=src.y-dst.y;
-    float dv=dx*dx+dy*dy;
-    return sqrt(dv);
-}
-varying vec3 vPosition;
-uniform float height;
-uniform float uStartTime;
-uniform vec3 uSize;
-uniform vec3 uFlowColor;
-uniform vec3 uCityColor;
-void main()
-{
-    //模型的基础颜色
-    vec3 distColor=uCityColor;
-    // 流动范围当前点z的高度加上流动线的高度
-    float topY=vPosition.z+10.;
-    if(height>vPosition.z&&height<topY){
-        // 颜色渐变
-            float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
-            distColor = mix(uFlowColor, distColor, 1.0-dIndex);
+        varying vec3 vPosition;
+        void main()
+        {
+          vPosition = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        }`,
 
-    }
-    //定位当前点位位置
-    vec2 position2D=vec2(vPosition.x,vPosition.y);
-    //求点到原点的距离
-    float Len=distanceTo(position2D,vec2(0,0));
-      if(Len>height*30.0&&Len<(height*30.0+130.0)){
-        // 颜色渐变
-        float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
-        distColor= mix(uFlowColor, distColor, 1.0-dIndex);
-    }
-    gl_FragColor=vec4(distColor,1.0);
-}`,
+        fragmentShader: `
+      float distanceTo(vec2 src,vec2 dst)
+      {
+          float dx=src.x-dst.x;
+          float dy=src.y-dst.y;
+          float dv=dx*dx+dy*dy;
+          return sqrt(dv);
+      }
+      varying vec3 vPosition;
+      uniform float height;
+      uniform float uStartTime;
+      uniform vec3 uSize;
+      uniform vec3 uFlowColor;
+      uniform vec3 uCityColor;
+      void main()
+      {
+          //模型的基础颜色
+          vec3 distColor=uCityColor;
+          // 流动范围当前点z的高度加上流动线的高度
+          float topY=vPosition.z+10.;
+          if(height>vPosition.z&&height<topY){
+              // 颜色渐变
+                  float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
+                  distColor = mix(uFlowColor, distColor, 1.0-dIndex);
+
+          }
+          //定位当前点位位置
+          vec2 position2D=vec2(vPosition.x,vPosition.y);
+          //求点到原点的距离
+          float Len=distanceTo(position2D,vec2(0,0));
+            if(Len>height*30.0&&Len<(height*30.0+130.0)){
+              // 颜色渐变
+              float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
+              distColor= mix(uFlowColor, distColor, 1.0-dIndex);
+          }
+          gl_FragColor=vec4(distColor,1.0);
+      }`,
         transparent: true,
       });
 
@@ -329,6 +336,7 @@ void main()
       height: {
         value: 0,
       },
+      value: true,
     };
   },
 };
