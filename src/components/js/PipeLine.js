@@ -27,7 +27,7 @@ class PipeLine {
       const l = [];
       this.position[i].forEach(e => l.push(new THREE.Vector3(e[0], e[1], e[2])));
       var curve = new THREE.CatmullRomCurve3(l); // 曲线路径
-      console.log(curve)
+      // console.log(curve)
       var geometry = new THREE.TubeGeometry(curve, 20,  this.width, 8, false);
       const textureLoader = new THREE.TextureLoader();
       this.texture = textureLoader.load(this.img);
@@ -41,7 +41,7 @@ class PipeLine {
       });
       this.line.push( new THREE.Mesh(geometry, material))
       this.scene.add(this.line[i]);
-      console.log(this.mesh);
+      // console.log(this.mesh);
       setInterval(() => {
         this.line[i].material.map.offset.x -= this.speed;
       }, 20);

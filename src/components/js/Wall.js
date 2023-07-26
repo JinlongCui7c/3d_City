@@ -23,34 +23,34 @@ class Wall {
   }
   CreatRing() {
     const vertexShader = `
-uniform vec3 u_color;
-uniform float time;
-uniform float u_height;
- 
-varying float v_opacity;
+    uniform vec3 u_color;
+    uniform float time;
+    uniform float u_height;
+    
+    varying float v_opacity;
 
-void main() {
-//模型点位置乘以一个0.0-1.0的系数，来模拟扩散效果。
-    vec3 vPosition = position * mod(time/20.0, 1.0);
-//模型的透明度和模型的高度呈反比
-    v_opacity =1.0- position.y / u_height;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1.0);
-}
+    void main() {
+    //模型点位置乘以一个0.0-1.0的系数，来模拟扩散效果。
+        vec3 vPosition = position * mod(time/20.0, 1.0);
+    //模型的透明度和模型的高度呈反比
+        v_opacity =1.0- position.y / u_height;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(vPosition, 1.0);
+    }
 `;
     const fragmentShader = ` 
-uniform vec3 u_color;
-uniform float u_opacity;
- 
-varying float v_opacity;
+    uniform vec3 u_color;
+    uniform float u_opacity;
+    
+    varying float v_opacity;
 
-void main() { 
-    //u_color是颜色 v_opacity * u_opacity是高度所产生的透明效果和模型传入的透明度的乘积。
-    gl_FragColor = vec4(u_color, v_opacity * u_opacity);
-}
+    void main() { 
+        //u_color是颜色 v_opacity * u_opacity是高度所产生的透明效果和模型传入的透明度的乘积。
+        gl_FragColor = vec4(u_color, v_opacity * u_opacity);
+    }
 `;
-//获取参数
+    //获取参数
     const { radius, height, opacity, color, speed, renderOrder } = this;
-//生成模型结构
+    //生成模型结构
     const geometry = new THREE.CylinderGeometry(
       radius,
       radius,

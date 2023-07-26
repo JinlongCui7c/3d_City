@@ -1,37 +1,71 @@
 <template>
-  <div id="scene">
-    <el-switch
-      v-model="value"
-      active-text="按月付费">
-  </el-switch>
+  <div id="all">
+    <div id="scene">
+      <div id="switch-container" class="grid-container">
+        <el-switch
+          v-model="value1"
+          @change="onSwitchChange1(value1)"
+          active-text="降雨效果">
+        </el-switch>
+        <el-switch
+          v-model="value"
+          active-text="按月付费">
+        </el-switch>
+        <el-switch
+          v-model="value"
+          active-text="按月付费">
+        </el-switch>
+      </div>
+    </div>
   </div>
 </template>
+
 <script>
+/* eslint-disable */
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
+import { GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
+import Stats from 'stats.js';
 import Wall from "./js/Wall";
 import RunRing from "./js/RunRing";
 import RunLine from "./js/RunLine";
+import Raining from "./js/Raining";
+import MyLight from "./js/MyLight";
+import {loadColliderEnvironment,loadplayer} from "./js/SceneRoam";
+
 let scene; //场景
 let camera; //相机
 let renderer; //创建渲染器
 // eslint-disable-next-line no-unused-vars
 let controls; //控制器
 let pickingScene, pickingTexture; //离屏渲染
+let stats;
+let loader;
 
 export default {
   mounted() {
     this.init();
+    this.createLight();
     this.createControls();
-    this.addGLTF();
-    this.render();
+    this.addModel();
+    // this.addGLTF();
+    // this.addCollider()
     // this.creatWall();
-    // this.creatRing();
     // this.creatRunLine();
+    this.addaxesHelper();
+    this.render();
     window.addEventListener("click", this.onDocumentMouseDown);
   },
   methods: {
+    // 开关1：降雨效果
+    onSwitchChange1(newValue) {
+      if(newValue)this.creatRaining();
+      else{
+        console.log('scene.remove(this.Raining.rainPoint);')
+        scene.remove(this.rain.rainPoint);
+      }
+    },
+
     init() {
       //创建场景
       scene = new THREE.Scene();
@@ -46,9 +80,8 @@ export default {
         "back.jpg",
       ]);
       scene.background = textureCube; // 作为背景贴图
-      /**
-       * 透视投影相机设置
-       */
+      
+      // 透视投影相机设置
       const width = window.innerWidth; // 窗口宽度
       const height = window.innerHeight; // 窗口高度
 
@@ -59,43 +92,66 @@ export default {
       // 创建渲染器对象
       const container = document.getElementById("scene");
       renderer = new THREE.WebGLRenderer({ antialias: true });
+
+      // 将 Stats 实例作为属性传递给 WebGLRenderer
+      renderer.stats = stats;
+
+      // 设置渲染器的属性
+      // renderer.autoClear 是 WebGLRenderer 的一个属性，用于指定在渲染新的帧之前是否自动清除渲染目标的内容
+      // 默认情况下，autoClear 的值为 true，这意味着在每次渲染新的帧之前，渲染器会自动清除渲染目标的内容。这包括清除颜色缓冲区、深度缓冲区和模板缓冲区。
+      // 如果你将 autoClear 设置为 false，渲染器将不会自动清除渲染目标的内容。这在某些情况下可能是有用的，例如在多个渲染步骤之间保留之前的渲染结果。
+      renderer.autoClear = true;
+
       renderer.setSize(container.clientWidth, container.clientHeight); // 设置渲染区域尺寸
       container.appendChild(renderer.domElement); // body元素中插入canvas对象
+      
+      //离屏渲染
+      pickingScene = new THREE.Scene();
+      pickingTexture = new THREE.WebGLRenderTarget(1, 1); 
 
-      //创建点光源和环境光源
-      const point = new THREE.PointLight(0xffffff);
-      point.position.set(600, 900, 600); // 点光源位置
-      scene.add(point); // 点光源添加到场景中
-      // 环境光
-      const ambient = new THREE.AmbientLight(0x404040, 1);
-      scene.add(ambient);
-      pickingScene = new THREE.Scene(); //离屏渲染
-      pickingTexture = new THREE.WebGLRenderTarget(1, 1); //离屏渲染
+      // 性能监视器
+      stats = new Stats();
+      // 0: fps, 1: ms, 2: mb, 3+: custom
+      stats.showPanel(0); 
+      document.getElementById('scene').appendChild(stats.dom);
     },
-    
+
+    addModel(){
+      // 添加人物
+      loadplayer(scene)
+    },
+
     createControls() {
       controls = new OrbitControls(camera, renderer.domElement);
     },
+
     render() {
+      stats.begin();
+      ////// 执行渲染逻辑//////
       this.cityanimate();
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
+      ////////////////////
+      stats.end();
+      // console.log('draw calss=',renderer.info.render.calls);
+      // renderer.info.update();
       requestAnimationFrame(this.render); // 请求再次执行渲染函数render
     },
+
     addGLTF() {
-      const loader = new GLTFLoader();
+      loader = new GLTFLoader();
       loader.load("shanghai.gltf", (gltf) => {
         gltf.scene.traverse((child) => {
           // 设置线框材质
           if (child.isMesh) {
             //这个判断模型是楼房还是其他  加载不同的材质
             if (["CITY_UNTRIANGULATED"].includes(child.name)) {
-              // 拿到模型线框的Geometry
-              this.setCityLineMaterial(child);
-              this.setCityMaterial(child);
+                // 拿到模型线框的Geometry
+                this.setCityLineMaterial(child);
+                this.setCityMaterial(child);
             } else if (["ROADS"].includes(child.name)) {
-              //道路
-              const material = new THREE.MeshBasicMaterial({
+                //道路
+                const material = new THREE.MeshBasicMaterial({
                 color: "rgb(41,46,76)",
               });
               const mesh = new THREE.Mesh(child.geometry, material);
@@ -121,10 +177,19 @@ export default {
               );
             }
           }
-          // 设置线框材质
         });
       });
     },
+
+    addCollider(){
+      // 给gltf模型添加三维碰撞面
+      loader.load("shanghai.gltf", gltf => {
+        const model = gltf.scene; // 获取加载后的模型
+        // 调用 loadColliderEnvironment 函数生成碰撞体和环境
+        loadColliderEnvironment(scene, model);
+      });
+    },
+
     setCityMaterial(object) {
       const shader = new THREE.ShaderMaterial({
         uniforms: {
@@ -136,6 +201,7 @@ export default {
             value: new THREE.Color("#1B3045"),
           },
         },
+
         vertexShader: `
         varying vec3 vPosition;
         void main()
@@ -145,42 +211,42 @@ export default {
         }`,
 
         fragmentShader: `
-      float distanceTo(vec2 src,vec2 dst)
-      {
-          float dx=src.x-dst.x;
-          float dy=src.y-dst.y;
-          float dv=dx*dx+dy*dy;
-          return sqrt(dv);
-      }
-      varying vec3 vPosition;
-      uniform float height;
-      uniform float uStartTime;
-      uniform vec3 uSize;
-      uniform vec3 uFlowColor;
-      uniform vec3 uCityColor;
-      void main()
-      {
-          //模型的基础颜色
-          vec3 distColor=uCityColor;
-          // 流动范围当前点z的高度加上流动线的高度
-          float topY=vPosition.z+10.;
-          if(height>vPosition.z&&height<topY){
-              // 颜色渐变
-                  float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
-                  distColor = mix(uFlowColor, distColor, 1.0-dIndex);
+        float distanceTo(vec2 src,vec2 dst)
+        {
+            float dx=src.x-dst.x;
+            float dy=src.y-dst.y;
+            float dv=dx*dx+dy*dy;
+            return sqrt(dv);
+        }
+        varying vec3 vPosition;
+        uniform float height;
+        uniform float uStartTime;
+        uniform vec3 uSize;
+        uniform vec3 uFlowColor;
+        uniform vec3 uCityColor;
+        void main()
+        {
+            //模型的基础颜色
+            vec3 distColor=uCityColor;
+            // 流动范围当前点z的高度加上流动线的高度
+            float topY=vPosition.z+10.;
+            if(height>vPosition.z&&height<topY){
+                // 颜色渐变
+                    float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
+                    distColor = mix(uFlowColor, distColor, 1.0-dIndex);
 
-          }
-          //定位当前点位位置
-          vec2 position2D=vec2(vPosition.x,vPosition.y);
-          //求点到原点的距离
-          float Len=distanceTo(position2D,vec2(0,0));
-            if(Len>height*30.0&&Len<(height*30.0+130.0)){
-              // 颜色渐变
-              float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
-              distColor= mix(uFlowColor, distColor, 1.0-dIndex);
-          }
-          gl_FragColor=vec4(distColor,1.0);
-      }`,
+            }
+            //定位当前点位位置
+            vec2 position2D=vec2(vPosition.x,vPosition.y);
+            //求点到原点的距离
+            float Len=distanceTo(position2D,vec2(0,0));
+              if(Len>height*30.0&&Len<(height*30.0+130.0)){
+                // 颜色渐变
+                float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
+                distColor= mix(uFlowColor, distColor, 1.0-dIndex);
+            }
+            gl_FragColor=vec4(distColor,1.0);
+        }`,
         transparent: true,
       });
 
@@ -251,6 +317,36 @@ export default {
         ],
       });
     },
+    addaxesHelper(){
+      // 红色轴（X轴）：表示水平方向的正方向。在三维空间中，X轴通常表示物体的左右方向。
+      // 绿色轴（Y轴）：表示垂直方向的正方向。在三维空间中，Y轴通常表示物体的上下方向。
+      // 蓝色轴（Z轴）：表示深度方向的正方向。在三维空间中，Z轴通常表示物体的前后方向。
+      // 创建坐标轴对象
+      const axesHelper = new THREE.AxesHelper(1000); // 参数表示坐标轴的长度
+
+      // 添加刻度
+      const size = 1000; // 刻度的长度
+      const divisions = 10; // 刻度的数量
+      const gridHelper = new THREE.GridHelper(size, divisions);
+
+      // 将坐标轴和刻度添加到场景中
+      scene.add(axesHelper);
+      scene.add(gridHelper);
+    },
+
+    creatRaining(){
+      this.rain = new Raining({
+        camera: camera,
+        scene: scene,
+      });
+    },
+
+    createLight(){
+      this.light=new MyLight(
+        {scene: scene}
+      );
+    },
+    
     creatRunLine() {
       this.runline1 = new RunLine({
         img: "z1.png",
@@ -301,10 +397,13 @@ export default {
         type: "run",
       });
     },
+
+    
     onDocumentMouseDown(event) {
       this.gpuClick();
       this.raycastClick(event);
     },
+
     raycastClick(event) {
       event.preventDefault();
       const vector = new THREE.Vector3(); // 三维坐标对象
@@ -320,12 +419,13 @@ export default {
       );
       const intersects = raycaster.intersectObjects(scene.children);
       if (intersects.length > 0) {
-        const selected = intersects[0]; // 取第一个物体
-        console.log(`x坐标:${selected.point.x}`);
-        console.log(`y坐标:${selected.point.y}`);
-        console.log(`z坐标:${selected.point.z}`);
+        // const selected = intersects[0]; // 取第一个物体
+        // console.log(`x坐标:${selected.point.x}`);
+        // console.log(`y坐标:${selected.point.y}`);
+        // console.log(`z坐标:${selected.point.z}`);
       }
     },
+
     gpuClick() {
       renderer.setRenderTarget(pickingTexture);
       renderer.render(pickingScene, camera);
@@ -336,7 +436,7 @@ export default {
       height: {
         value: 0,
       },
-      value: true,
+      value1: false,
     };
   },
 };
@@ -350,5 +450,17 @@ body,
   z-index: 2;
   position: absolute;
   top: 0%;
+}
+#switch-container {
+  display: grid;
+  grid-template-columns: repeat(5, max-content); /* 三列，每列的宽度根据内容自适应 */
+  gap: 20px; /* 设置按钮之间的间距为 20 像素 */
+  justify-content: center; /* 水平居中对齐 */
+  align-items: center; /* 垂直居中对齐 */
+  position: absolute; /* 设置为绝对定位 */
+  top: 3%; /* 将按钮容器置于场景垂直中间 */
+  left: 50%; /* 将按钮容器置于场景水平中间 */
+  transform: translate(-50%, -50%); /* 根据容器大小调整位置 */
+  z-index: 2; /* 设置层级，使按钮容器悬浮在场景表面 */
 }
 </style>

@@ -9,7 +9,7 @@ import scene from './components/scene.vue'
 export default {
   name: 'App',
   components: {
-    scene
+    scene,
   }
 }
 </script>
