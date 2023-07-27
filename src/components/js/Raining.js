@@ -3,7 +3,7 @@ import * as THREE from "three";
 
 class Raining {
   constructor(option) {
-    this.pointCount = option.pointCount || 1000; //雨滴的数量
+    this.pointCount = option.pointCount || 4000; //雨滴的数量
     this.camera = option.camera || ""; 
     this.scene = option.scene || "";
     this.size=option.size || 10; //雨滴的大小

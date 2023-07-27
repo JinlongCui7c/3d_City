@@ -9,11 +9,11 @@
         </el-switch>
         <el-switch
           v-model="value"
-          active-text="按月付费">
+          active-text="飞线飞点">
         </el-switch>
         <el-switch
           v-model="value"
-          active-text="按月付费">
+          active-text="扩散墙">
         </el-switch>
       </div>
     </div>
@@ -47,12 +47,12 @@ export default {
     this.init();
     this.createLight();
     this.createControls();
-    this.addModel();
-    // this.addGLTF();
-    // this.addCollider()
+    // this.addModel();
+    this.addGLTF();
+    this.addCollider();
     // this.creatWall();
     // this.creatRunLine();
-    this.addaxesHelper();
+    // this.addaxesHelper();
     this.render();
     window.addEventListener("click", this.onDocumentMouseDown);
   },
@@ -144,29 +144,26 @@ export default {
         gltf.scene.traverse((child) => {
           // 设置线框材质
           if (child.isMesh) {
-            //这个判断模型是楼房还是其他  加载不同的材质
             if (["CITY_UNTRIANGULATED"].includes(child.name)) {
                 // 拿到模型线框的Geometry
                 this.setCityLineMaterial(child);
                 this.setCityMaterial(child);
             } else if (["ROADS"].includes(child.name)) {
                 //道路
-                const material = new THREE.MeshBasicMaterial({
-                color: "rgb(41,46,76)",
-              });
-              const mesh = new THREE.Mesh(child.geometry, material);
-              mesh.rotateX(-Math.PI / 2);
-              mesh.position.set(
-                child.position.x,
-                child.position.y,
-                child.position.z
-              );
-              scene.add(mesh);
+                const material = new THREE.MeshPhongMaterial({
+                  color: "#515151",
+                });
+                const mesh = new THREE.Mesh(child.geometry, material);
+                mesh.rotateX(-Math.PI / 2);
+                mesh.position.set(
+                  child.position.x,
+                  child.position.y,
+                  child.position.z
+                );
+                scene.add(mesh);
             } else {
               //地面
-              const material = new THREE.MeshBasicMaterial({
-                color: "#040912",
-              });
+              const material = new THREE.MeshPhongMaterial({color: "#A9A9A9",});
               const mesh = new THREE.Mesh(child.geometry, material);
               scene.add(mesh);
               mesh.rotateX(-Math.PI / 2);
@@ -178,6 +175,19 @@ export default {
             }
           }
         });
+      });
+    },
+
+    creatRing() {
+      this.RunRing1 = new RunRing({
+        img: "clice.png",
+        scene: scene,
+        speed: 1,
+        radius: 400,
+        position: [
+          [400, 20, 400],
+          [100, 20, 1200],
+        ],
       });
     },
 
@@ -195,10 +205,10 @@ export default {
         uniforms: {
           height: this.height,
           uFlowColor: {
-            value: new THREE.Color("#5588aa"),
+            value: new THREE.Color("#B8860B"),
           },
           uCityColor: {
-            value: new THREE.Color("#1B3045"),
+            value: new THREE.Color("#8B7D6B"),
           },
         },
 
@@ -232,8 +242,8 @@ export default {
             float topY=vPosition.z+10.;
             if(height>vPosition.z&&height<topY){
                 // 颜色渐变
-                    float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
-                    distColor = mix(uFlowColor, distColor, 1.0-dIndex);
+                float dIndex = sin((height - vPosition.z) / 10.0 * 3.14);
+                distColor = mix(uFlowColor, distColor, 1.0-dIndex);
 
             }
             //定位当前点位位置
@@ -242,7 +252,7 @@ export default {
             float Len=distanceTo(position2D,vec2(0,0));
               if(Len>height*30.0&&Len<(height*30.0+130.0)){
                 // 颜色渐变
-                float dIndex = sin((Len - height*30.0) / 130.0 * 3.14);
+                float dIndex = sin((Len - height*30.0) / 230.0 * 3.14);
                 distColor= mix(uFlowColor, distColor, 1.0-dIndex);
             }
             gl_FragColor=vec4(distColor,1.0);
@@ -250,22 +260,24 @@ export default {
         transparent: true,
       });
 
-      const city = new THREE.Mesh(object.geometry, shader);
+      // const city = new THREE.Mesh(object.geometry, shader);
+      const city = new THREE.Mesh(object.geometry, new THREE.MeshPhongMaterial({color: "#8B7D6B",}));
+  
       city.position.set(
         object.position.x,
         object.position.y,
         object.position.z
       );
       scene.add(city);
-      // pickingScene.add(city);
       city.rotateX(-Math.PI / 2);
     },
+
     setCityLineMaterial(object) {
       const edges = new THREE.EdgesGeometry(object.geometry, 1);
       //设置模型的材质
       const lineMaterial = new THREE.LineBasicMaterial({
         // 线的颜色
-        color: "rgba(38,133,254)",
+        color: "#2B2B2B",
       });
       //把数据组合起来
       const lineS = new THREE.LineSegments(edges, lineMaterial);
@@ -289,33 +301,21 @@ export default {
     creatWall() {
       const wallData = {
         position: {
-          x: -150,
+          x: 50,
           y: 15,
           z: 100,
         },
         speed: 0.5,
-        color: "#efad35",
+        color: "#EEE685",
         opacity: 0.6,
-        radius: 420,
-        height: 120,
+        radius: 1020,
+        height: 290,
         renderOrder: 5,
       };
 
       let wallMesh = new Wall(wallData);
       wallMesh.mesh.material.uniforms.time = this.height;
       scene.add(wallMesh.mesh);
-    },
-    creatRing() {
-      this.RunRing1 = new RunRing({
-        img: "clice.png",
-        scene: scene,
-        speed: 1,
-        radius: 400,
-        position: [
-          [400, 20, 400],
-          [100, 20, 1200],
-        ],
-      });
     },
     addaxesHelper(){
       // 红色轴（X轴）：表示水平方向的正方向。在三维空间中，X轴通常表示物体的左右方向。

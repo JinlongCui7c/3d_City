@@ -174,7 +174,7 @@ export default function Roaming(window,camera){
        })
 }
 
-
+/*
 updatePlayer(delta, params, fwdPressed, tempVector, upVector, bkdPressed, lftPressed, rgtPressed, tempBox, tempMat, tempSegment, tempVector2, camera) {
        const that = this
        that.playerVelocity.y += that.playerIsOnGround ? 0 : delta * params.gravity
@@ -281,4 +281,4 @@ updatePlayer(delta, params, fwdPressed, tempVector, upVector, bkdPressed, lftPre
          that.reset(camera)
        }
 }
-     
+*/     
