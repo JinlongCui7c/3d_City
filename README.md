@@ -22,7 +22,7 @@ yarn build
 
 ### 基础城市场景：建筑、地面、道路
 
-* 在场景中导入GLTF模型，整个模型可以分为三类，建筑（`CITY_UNTRIANGULATED`），道路（`ROADS`），地面（`other`），对不同的数据分别添加不同的材质系统。
+* 在场景中导入GLTF模型，整个模型可以分为三类，建筑 `CITY_UNTRIANGULATED`，道路 `ROADS`，地面 `other`，对不同的数据分别添加不同的材质系统。
 
 ### 光影特效：上升线效果
 
@@ -46,7 +46,7 @@ yarn build
 ### 光影特效：飞线、飞点
 
 * 通过两点创建贝塞尔曲线，并将该曲线的点序列构造成 `MeshLine`，生成有宽度的线，然后将飞线的纹理对 `MeshLine`做贴图。
-* 对 `MeshLine`（[github.com/spite/THREE…](https://link.juejin.cn/?target=https%3A%2F%2Fgithub.com%2Fspite%2FTHREE.MeshLine "https://github.com/spite/THREE.MeshLine") ）中的效果进行修改，实现模型材质的uv移动。
+* 对 `MeshLine`（[github.com/spite/THREE…](https://github.com/spite/THREE.MeshLine) ）中的效果进行修改，实现模型材质的uv移动。
 
 ![1690476808796](image/README/1690476808796.gif)
 
