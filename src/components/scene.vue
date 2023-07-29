@@ -22,6 +22,7 @@
 
 <script>
 /* eslint-disable */
+
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
@@ -36,20 +37,22 @@ import {loadColliderEnvironment,loadplayer} from "./js/SceneRoam";
 let scene; //场景
 let camera; //相机
 let renderer; //创建渲染器
-// eslint-disable-next-line no-unused-vars
 let controls; //控制器
 let pickingScene, pickingTexture; //离屏渲染
 let stats;
 let loader;
+let isWalk = false;
+let mixer, animations,playerMesh, prePos;
+let clock = new THREE.Clock();
 
 export default {
   mounted() {
     this.init();
     this.createLight();
     this.createControls();
-    // this.addModel();
     this.addGLTF();
-    this.addCollider();
+    this.addModel();
+    // this.addCollider();
     // this.creatWall();
     // this.creatRunLine();
     // this.addaxesHelper();
@@ -87,8 +90,8 @@ export default {
 
       /** 透视投影相机对象 */
       camera = new THREE.PerspectiveCamera(60, width / height, 1, 100000);
-      camera.position.set(600, 900, 600); // 树上面观察
-      camera.lookAt(scene.position); // 设置相机方向(指向的场景对象)
+      camera.position.set(600, 900, 600);
+      camera.lookAt(scene.position);
       // 创建渲染器对象
       const container = document.getElementById("scene");
       renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -118,7 +121,133 @@ export default {
 
     addModel(){
       // 添加人物
-      loadplayer(scene)
+      // loadplayer(scene)
+      loader.load(`Xbot.glb`,(gltf) => {
+        playerMesh = gltf.scene;
+        scene.add(playerMesh);
+        // 模型的位置
+        playerMesh.position.set(0, 0, 0);
+        // 模型初始面朝哪里的位置
+        playerMesh.rotateY(-Math.PI / 2);
+        // 镜头给到模型
+        playerMesh.add(camera);
+        // 相机初始位置
+        camera.position.set(0, 1, -4);
+        // 相机的位置在人物的后方，这样可以形成第三方视角
+        camera.lookAt(new THREE.Vector3(0, 0, 1));
+        // 输出模型的动作类别
+        // console.log(gltf.animations);
+        animations = gltf.animations;
+
+        playerMesh.position.y += 19;
+
+        mixer = startAnimation(
+          playerMesh,
+          animations,
+          "idle" 
+        );
+
+      });
+
+      window.addEventListener("keydown", (e) => {
+      // 前进
+      if (e.key == "w") {
+        playerMesh.translateZ(0.6);
+        if (!isWalk) {
+          // console.log(e.key);
+          isWalk = true;
+
+          mixer = startAnimation(
+            playerMesh,
+            animations,
+            "run"
+          );
+        }
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      // 后退
+      if (e.key == "s") {
+        playerMesh.translateZ(-0.1);
+
+        if (!isWalk) {
+          // console.log(e.key);
+          isWalk = true;
+
+          mixer = startAnimation(
+            playerMesh,
+            animations,
+            "walk" 
+          );
+        }
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      // 左
+      if (e.key == "a") {
+        playerMesh.translateX(0.1);
+        if (!isWalk) {
+          // console.log(e.key);
+          isWalk = true;
+
+          mixer = startAnimation(
+            playerMesh,
+            animations,
+            "walk" 
+          );
+        }
+      }
+    });
+
+    window.addEventListener("keydown", (e) => {
+      // 右
+      if (e.key == "d") {
+        playerMesh.translateX(-0.1);
+        playerMesh.rotateY(-Math.PI / 32);
+        if (!isWalk) {
+          // console.log(e.key);
+          isWalk = true;
+
+          mixer = startAnimation(
+            playerMesh,
+            animations,
+            "walk" 
+          );
+        }
+      }
+    });
+
+    function startAnimation(skinnedMesh, animations, animationName) {
+      const m_mixer = new THREE.AnimationMixer(skinnedMesh);
+      const clip = THREE.AnimationClip.findByName(animations, animationName);
+      if (clip) {
+        const action = m_mixer.clipAction(clip);
+        action.play();
+      }
+      return m_mixer;
+    }
+
+  window.addEventListener("mousemove", (e) => {
+    if (prePos) {
+      playerMesh.rotateY((prePos - e.clientX) * 0.01);
+    }
+    prePos = e.clientX;
+  });
+
+  window.addEventListener("keyup", (e) => {
+    // console.log(e.key);
+    if (e.key == "w" || e.key == "s" || e.key == "d" || e.key == "a") {
+      isWalk = false;
+      mixer = startAnimation(
+        playerMesh,
+        animations,
+        "idle" 
+      );
+    }
+  });
+
     },
 
     createControls() {
@@ -131,6 +260,11 @@ export default {
       this.cityanimate();
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
+
+      if (mixer) {
+        mixer.update(clock.getDelta());
+      }
+
       ////////////////////
       stats.end();
       // console.log('draw calss=',renderer.info.render.calls);
@@ -289,15 +423,16 @@ export default {
       );
       //添加到场景
       scene.add(lineS);
-
       lineS.rotateX(-Math.PI / 2);
     },
+
     cityanimate() {
       this.height.value += 0.2;
       if (this.height.value > 100) {
         this.height.value = 0.0;
       }
     },
+
     creatWall() {
       const wallData = {
         position: {
@@ -317,6 +452,7 @@ export default {
       wallMesh.mesh.material.uniforms.time = this.height;
       scene.add(wallMesh.mesh);
     },
+
     addaxesHelper(){
       // 红色轴（X轴）：表示水平方向的正方向。在三维空间中，X轴通常表示物体的左右方向。
       // 绿色轴（Y轴）：表示垂直方向的正方向。在三维空间中，Y轴通常表示物体的上下方向。
@@ -431,6 +567,7 @@ export default {
       renderer.render(pickingScene, camera);
     },
   },
+  
   data() {
     return {
       height: {
