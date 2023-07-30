@@ -33,6 +33,8 @@ import RunLine from "./js/RunLine";
 import Raining from "./js/Raining";
 import MyLight from "./js/MyLight";
 import {loadColliderEnvironment,loadplayer} from "./js/SceneRoam";
+import { Octree } from 'three/examples/jsm/math/Octree';
+import { Capsule } from 'three/examples/jsm/math/Capsule';
 
 let scene; //场景
 let camera; //相机
@@ -44,6 +46,8 @@ let loader;
 let isWalk = false;
 let mixer, animations,playerMesh, prePos;
 let clock = new THREE.Clock();
+const worldOctree = new Octree();
+let playerCollider;
 
 export default {
   mounted() {
@@ -120,6 +124,9 @@ export default {
     },
 
     addModel(){
+      // console.log('worldOctree',worldOctree)
+      // 创建胶囊体
+      playerCollider = new Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 1, 0), 0.26);
       // 添加人物
       // loadplayer(scene)
       loader.load(`Xbot.glb`,(gltf) => {
@@ -149,12 +156,26 @@ export default {
 
       });
 
+      // 首先调用了 worldOctree 中的 capsuleIntersect 方法，将玩家的碰撞体 playerCollider 作为参数传入，得到碰撞检测的结果 result。 
+      // 如果 result 存在，说明发生了碰撞，需要将玩家位置进行调整
+      function playerCollisions() {
+        const result = worldOctree.capsuleIntersect(playerCollider);
+        console.log('result',result)
+        if (result) {
+            playerOnFloor = result.normal.y > 0;
+            playerCollider.translate(result.normal.multiplyScalar(result.depth));
+          }
+      }
+      
       window.addEventListener("keydown", (e) => {
       // 前进
       if (e.key == "w") {
         playerMesh.translateZ(0.6);
+        // 改变胶囊体位置
+        playerCollider.translate(new THREE.Vector3(0, 0, 0.6));
+        // console.log('playerCollider',playerCollider.end);
+        playerCollisions();
         if (!isWalk) {
-          // console.log(e.key);
           isWalk = true;
 
           mixer = startAnimation(
@@ -189,7 +210,6 @@ export default {
       if (e.key == "a") {
         playerMesh.translateX(0.1);
         if (!isWalk) {
-          // console.log(e.key);
           isWalk = true;
 
           mixer = startAnimation(
@@ -207,7 +227,6 @@ export default {
         playerMesh.translateX(-0.1);
         playerMesh.rotateY(-Math.PI / 32);
         if (!isWalk) {
-          // console.log(e.key);
           isWalk = true;
 
           mixer = startAnimation(
@@ -237,7 +256,6 @@ export default {
   });
 
   window.addEventListener("keyup", (e) => {
-    // console.log(e.key);
     if (e.key == "w" || e.key == "s" || e.key == "d" || e.key == "a") {
       isWalk = false;
       mixer = startAnimation(
@@ -261,6 +279,7 @@ export default {
       renderer.setRenderTarget(null);
       renderer.render(scene, camera);
 
+      // 人物模型的动态
       if (mixer) {
         mixer.update(clock.getDelta());
       }
@@ -275,6 +294,7 @@ export default {
     addGLTF() {
       loader = new GLTFLoader();
       loader.load("shanghai.gltf", (gltf) => {
+        worldOctree.fromGraphNode(gltf.scene);
         gltf.scene.traverse((child) => {
           // 设置线框材质
           if (child.isMesh) {

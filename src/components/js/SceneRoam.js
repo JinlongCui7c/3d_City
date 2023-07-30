@@ -5,6 +5,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader";
 import {MeshBVH,MeshBVHVisualizer} from 'three-mesh-bvh'
 
+
 // gui配置对对象 这是初始化中为了配置gui的对象
 let params = {
        firstPerson: false,
@@ -94,7 +95,7 @@ export function loadColliderEnvironment(scene, model) {
        scene.add(environment)
 }
             
-
+// 该方法已经废弃
 export function loadplayer(scene) {
        // character 人物模型参考几何体
        let player = new THREE.Mesh(
@@ -132,3 +133,5 @@ export function loadplayer(scene) {
               scene.add(robot)
        })
 }
+
+
