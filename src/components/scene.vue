@@ -1,5 +1,6 @@
 <template>
   <div id="all">
+    <canvas id="app"></canvas>
     <div id="scene">
       <div id="switch-container" class="grid-container">
         <el-switch
@@ -32,9 +33,11 @@ import RunRing from "./js/RunRing";
 import RunLine from "./js/RunLine";
 import Raining from "./js/Raining";
 import MyLight from "./js/MyLight";
-import {loadColliderEnvironment,loadplayer} from "./js/SceneRoam";
+import { SmokePartile } from "./js/smoke/smoke-particle";
+import {loadColliderEnvironment} from "./js/SceneRoam";
 import { Octree } from 'three/examples/jsm/math/Octree';
 import { Capsule } from 'three/examples/jsm/math/Capsule';
+
 
 let scene; //场景
 let camera; //相机
@@ -55,13 +58,14 @@ export default {
     this.createLight();
     this.createControls();
     this.addGLTF();
-    this.addModel();
+    // this.addModel();
     // this.addCollider();
+    this.addSmoke();
     // this.creatWall();
     // this.creatRunLine();
     // this.addaxesHelper();
     this.render();
-    window.addEventListener("click", this.onDocumentMouseDown);
+    // window.addEventListener("click", this.onDocumentMouseDown);
   },
   methods: {
     // 开关1：降雨效果
@@ -291,6 +295,12 @@ export default {
       requestAnimationFrame(this.render); // 请求再次执行渲染函数render
     },
 
+    addSmoke(){
+      const particle = new SmokePartile(scene);
+      // console.log('particle',particle)
+      console.log('scene',scene)
+    },
+
     addGLTF() {
       loader = new GLTFLoader();
       loader.load("shanghai.gltf", (gltf) => {
@@ -498,6 +508,10 @@ export default {
     },
 
     createLight(){
+      // 创建环境光并设置颜色为白色，强度为 1
+      const ambientLight = new THREE.AmbientLight(0xffffff, 1);
+      // scene.add(ambientLight);
+
       this.light=new MyLight(
         {scene: scene}
       );

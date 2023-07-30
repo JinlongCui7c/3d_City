@@ -3,17 +3,17 @@ import * as THREE from "three";
 
 class Raining {
   constructor(option) {
-    this.pointCount = option.pointCount || 4000; //雨滴的数量
+    this.pointCount = option.pointCount || 2000; //雨滴的数量
     this.camera = option.camera || ""; 
     this.scene = option.scene || "";
-    this.size=option.size || 10; //雨滴的大小
+    this.size=option.size || 200; //雨滴的大小
     this.transparent=option.transparent || true;
-    this.opacity=option.opacity || 0.5;
+    this.opacity=option.opacity || 0.9;
     this.vertexColors=option.vertexColors || false; 
     this.sizeAttenuation=option.sizeAttenuation || true;
     this.thing = "";
     this.rainPoint=null;
-    this.color =option.color || 0xededed; //雨滴的颜色
+    this.color =option.color || '#A9C4D4'; //雨滴的颜色
     this.creatRainingSystem();
   }
 
@@ -35,7 +35,7 @@ class Raining {
     
     // 加载雨滴贴图
     let textureLoader = new THREE.TextureLoader();
-    let rainTexture = textureLoader.load('https://s2.loli.net/2023/01/31/qT2vC8G71UtMXeb.png');
+    let rainTexture = textureLoader.load('https://s2.loli.net/2023/07/31/SZQzUA6XMgGVDi7.png');
     // 点材质
     let material= new THREE.PointsMaterial({
       size: this.size, // 大小
@@ -61,7 +61,7 @@ class Raining {
         const positions = this.rainPoint.geometry.getAttribute("position").array;
         // 遍历y
         for (let i = 0; i < this.pointCount * 3; i += 3) {
-          positions[i + 1] -= Math.random() * 10;
+          positions[i + 1] -= Math.random() * 30;
           if (positions[i + 1] < 0) {
             positions[i + 1] = 500;
           }
